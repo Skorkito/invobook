@@ -1,0 +1,107 @@
+services:
+  app:
+    build:
+        context: .
+        dockerfile: ./docker/php/Dockerfile.dev
+    container_name: invobook_dev_app
+    restart: unless-stopped
+    volumes:
+        - ./src:/var/www/html
+    ports:
+        - ${APP_PORT:-8081}:8000
+    networks:
+      - net_invobook
+    env_file:
+      -  .env.docker
+    environment:
+      APP_NAME: "SORIX CRM"
+      APP_ENV: local
+      OCTANE_SERVER: "frankenphp"
+      OCTANE_WORKERS: "4"
+      OCTANE_TASK_WORKERS: "6"
+      OCTANE_MAX_EXECUTION_TIME: "30"
+      KONTO_WSIP_API_URL: "https://konto.wsip.pl/"
+      KONTO_WSIP_API_HASH: "o.A30-L5!XR^oWr2@DWVUm!k$$Xc6>?vh"
+    depends_on:
+      - mysql
+      - redis
+
+  mysql:
+    image: mysql:8.0
+    container_name: invobook_dev_mysql
+    restart: unless-stopped
+    env_file:
+      -  .env.docker
+    command: --sort_buffer_size=64M
+    ports:
+      - "3308:3306"
+    volumes:
+      - dbdata_dev:/var/lib/mysql
+    networks:
+      - net_invobook
+    environment:
+      MYSQL_ROOT_PASSWORD: "rasdasUY67123a23!!"
+      MYSQL_DATABASE: "project_manager"
+      MYSQL_USER: "user_project_manager"
+      MYSQL_PASSWORD: "rasdaasd3a23!add!"
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: invobook_dev_phpmyadmin
+    restart: unless-stopped
+    env_file:
+      -  .env.docker
+    ports:
+        - "8097:80"
+    networks:
+        - net_invobook
+    depends_on:
+        - mysql
+    environment:
+        PMA_HOST: "mysql"
+        PMA_USER: "user_project_manager"
+        PMA_PASSWORD: "rasdaasd3a23!add!"
+
+  redis:
+    image: redis:alpine
+    container_name: invobook_dev_redis
+    restart: unless-stopped
+    env_file:
+      -  .env.docker
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata_dev:/data
+    networks:
+      - net_invobook
+    command: redis-server --requirepass "rasdasUY67123a23!!"
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: invobook_dev_redis_commander
+    restart: unless-stopped
+    env_file:
+      -  .env.docker
+    ports:
+      - "8091:8081"
+    networks:
+      - net_invobook
+    depends_on:
+      - redis
+    environment:
+      REDIS_HOSTS: "local:redis:6379"
+
+networks:
+  net_invobook:
+    name: net_invobook
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.101.0/24
+
+volumes:
+  dbdata_dev:
+    name: invobook_dev_dbdata
+  redisdata_dev:
+    name: invobook_dev_redisdata
